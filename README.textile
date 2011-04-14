@@ -1,0 +1,3 @@
+http://www.cs.washington.edu/education/courses/csep590b/11sp/hw/hw2.html
+
+# Implement the Smith-Waterman local sequence alignment algorithm described in the second lecture (and text section 2.3; not the fancy linear space version in section 2.6).  (Yes, I know you can find code on the web to do this, but don't.)  You may use C, C++, C#, Java, Scheme, Perl, Python, R or Ruby; ask if you prefer something else. 
