@@ -1,3 +1,5 @@
+require 'logger'
+
 class SmithWatermann
   class Score
     def initialize(x, y)
@@ -53,6 +55,9 @@ class SmithWatermann
   ] 
 
   def initialize(first_dna, second_dna)
+    @logger = Logger.new(STDOUT)
+    @logger.level = Logger::WARN
+
     @first_dna = " #{first_dna.upcase}"
     @second_dna = " #{second_dna.upcase}"
 
@@ -65,60 +70,62 @@ class SmithWatermann
   end
 
   def run
-    p @score
+    @logger.debug(@score)
 
     max, i, j = @score.max
-    puts "Highest value is #{max} at #{i} #{j}"
+    @logger.debug("Highest value is #{max} at #{i} #{j}")
 
-    top_string = @first_dna[i]
-    mid_string = '+'
-    bot_string = @second_dna[j]
-    mid_string = top_string if top_string == bot_string
+    top_string = @first_dna[i].chr
+    bot_string = @second_dna[j].chr
+    mid_string = (top_string == bot_string) ? @first_dna[i].chr : '+'
 
     while (true)
       up = @score[i-1, j]
-      p "upscore is #{up}"
+      @logger.debug("upscore is #{up}")
       left = @score[i, j-1]
-      p "leftscore is #{left}"
+      @logger.debug("leftscore is #{left}")
       maxUpLeft = [up, left].max
       # is it a match/mismatch?
       valMatch = @score[i-1, j-1]
+
       if (valMatch >= maxUpLeft)
  
-        p 'Match or Positive Mismatch'
-        i = i - 1
-        j = j - 1
+        @logger.debug('Match or Positive Mismatch')
+        i -= 1
+        j -= 1
         if (valMatch <= 0)
           break
         end
-        top_string = @first_dna[i] + top_string
-        bot_string = @second_dna[j] + bot_string
+        top_string << @first_dna[i].chr
+        bot_string << @second_dna[j].chr
         if ismatch?(i, j)
-          mid_string = @first_dna[i] + mid_string
+          mid_string << @first_dna[i].chr
         elsif blosum_score(i, j) > 0
-          mid_string = '+' + mid_string
+          mid_string << '+'
         else
-          mid_string = ' ' + mid_string
+          mid_string << ' '
         end 
       elsif up > left
-        p 'Chose up path'
-        i = i-1
-        j = j
-        top_string = @first_dna[i] + top_string
-        bot_string = '-' + bot_string
-        mid_string = ' ' + mid_string
+        @logger.debug('Chose up path')
+        i -= 1
+        top_string << @first_dna[i].chr
+        bot_string << '-'
+        mid_string << ' '
       else
-        p 'Chose left path'
-        i = i
-        j = j - 1
-        top_string = '-' + top_string
-        bot_string = @second_dna[j] + bot_string
-        mid_string = ' ' + mid_string
+        @logger.debug('Chose left path')
+        j -= 1
+        top_string << '-'
+        bot_string << @second_dna[j].chr
+        mid_string << ' '
       end
 
       break if (i == 0 && j == 0)
       break if (@score[i, j] == 0)
     end
+
+    top_string.reverse!
+    mid_string.reverse!
+    bot_string.reverse!
 
     strTop = "#{j} #{bot_string}"
     strBot = "#{i} #{top_string}"
@@ -128,7 +135,7 @@ class SmithWatermann
     p strBot
 
     p @second_dna
-    p @score
+    @logger.debug(@score)
   end
 
   def ismatch?(i, j)
@@ -148,7 +155,7 @@ class SmithWatermann
   end
 
   def blosum_score(i, j)
-    BLOSUM62[INDEX.index(@first_dna[i])][INDEX.index(@second_dna[j])]
+    BLOSUM62[INDEX.index(@first_dna[i].chr)][INDEX.index(@second_dna[j].chr)]
   end
 end
 
@@ -158,4 +165,3 @@ if __FILE__ == $0
   sw = SmithWatermann.new('deadly', 'ddgearlyk')
   sw.run
 end
-
