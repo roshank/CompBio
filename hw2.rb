@@ -1,5 +1,4 @@
 class SmithWatermann
-
   # Uh - right now first should be SECOND (aka bottom)
   # and second is first - aka TOP string. crazy, right?
   @@first_dna = 'DEADLY'
@@ -36,30 +35,11 @@ class SmithWatermann
 [ -1,  0,  0,  1, -3,  3,  4, -2,  0, -3, -3,  1, -1, -3, -1,  0, -1, -3, -2, -2,  1,  4, -1 ],
 [  0, -1, -1, -1, -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -2,  0,  0, -2, -1, -1, -1, -1, -1 ]] 
 
-
   #Some pretty bad code to build a 2 dimensional array.
   #Should learn some more ruby and clean this up
   def init_score
-    score = Array.new(@@first_dna.length)
-    i = 0
-    while (i < @@first_dna.length)
-      score[i] = Array.new(@@second_dna.length)
-      i+=1  
-    end
-
-    i = 0
-    j = 0
-    while (i < @@first_dna.length)
-      while (j < @@second_dna.length)
-        score[i][j] = 0
-        j+=1
-      end
-      i+=1
-      j = 0
-    end
-    return score
+    Array.new(@@first_dna.length) { Array.new(@@second_dna.length, 0) }
   end
-
 
   #Does the main logic of filling in score matrix
   def run
