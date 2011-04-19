@@ -35,14 +35,15 @@ class SmithWatermann
     @first_dna = " #{first_dna.upcase}"
     @second_dna = " #{second_dna.upcase}"
 
-    @score = Array.new(@first_dna.length) { Array.new(@second_dna.length, 0) }
+    # @score = Array.new(@first_dna.length) { Array.new(@second_dna.length, 0) }
+    @score = Array.new(@first_dna.length * @second_dna.length, 0)
   end
 
   #Does the main logic of filling in score matrix
   def run
     (1...@first_dna.length).each do |i|
       (1...@second_dna.length).each do |j|
-        @score[i][j] = [0, match(i,j), delete(i,j), insert(i,j)].max
+        @score[i*@second_dna.length + j] = [0, match(i,j), delete(i,j), insert(i,j)].max
       end
     end
 
@@ -55,47 +56,30 @@ class SmithWatermann
   def traceback
     p @score
 
-    i = 0
-    j = 0
-
-    max = 0
-    maxI = 0
-    maxJ = 0
-
-    while (i < @first_dna.length)
-      while(j < @second_dna.length)
-        if (max < @score[i][j])
-          max = @score[i][j]
-          maxI = i
-          maxJ = j
-        end
-        j+=1
-      end
-      i+=1
-      j = 0
-    end
+    max = @score.max
+    maxI, maxJ = @score.index(max).divmod(@second_dna.length)
 
     puts "Highest value is " + max.to_s + " at " + maxI.to_s + " " + maxJ.to_s
     i = maxI
     j = maxJ
-    top_string = @first_dna[maxI,1]
+    top_string = @first_dna[maxI]
     
     if ismatch?(maxI, maxJ)
-      mid_string = @first_dna[maxI,1].to_s
+      mid_string = @first_dna[maxI].to_s
     else
       mid_string = '+'
     end 
     
-    bot_string = @second_dna[maxJ,1]
+    bot_string = @second_dna[maxJ]
 
     while (true)
-      up = @score[i-1][j]
+      up = score(i-1, j)
       p 'upscale is' + up.to_s
-      left = @score[i][j-1]
+      left = score(i, j-1)
       p 'leftscore is' + left.to_s
       maxUpLeft = [up, left].max
       # is it a match/mismatch?
-      valMatch = @score[i - 1][j - 1]
+      valMatch = score(i-1, j-1)
       if (valMatch >= maxUpLeft)
  
         p 'Match or Positive Mismatch'
@@ -104,10 +88,10 @@ class SmithWatermann
         if (valMatch <= 0)
           break
         end
-        top_string = @first_dna[i,1].to_s + top_string.to_s
-        bot_string = @second_dna[j,1].to_s + bot_string.to_s
+        top_string = @first_dna[i].to_s + top_string.to_s
+        bot_string = @second_dna[j].to_s + bot_string.to_s
         if ismatch?(i, j)
-          mid_string = @first_dna[i,1].to_s + mid_string.to_s
+          mid_string = @first_dna[i].to_s + mid_string.to_s
         elsif blosum_score(i, j) > 0
           mid_string = '+' + mid_string.to_s
         else
@@ -117,7 +101,7 @@ class SmithWatermann
         p 'Chose up path'
         i = i-1
         j = j
-        top_string = @first_dna[i,1].to_s + top_string.to_s
+        top_string = @first_dna[i].to_s + top_string.to_s
         bot_string = '-' + bot_string.to_s
         mid_string = ' ' + mid_string.to_s
       else
@@ -125,13 +109,13 @@ class SmithWatermann
         i = i
         j = j - 1
         top_string = '-' + top_string.to_s
-        bot_string = @second_dna[j,1].to_s + bot_string.to_s
+        bot_string = @second_dna[j].to_s + bot_string.to_s
         mid_string = ' ' + mid_string.to_s
       end
       if (i == 0 && j == 0)
         break
       end
-      if (@score[i][j] == 0)
+      if (score(i,j) == 0)
         break 
       end
     end
@@ -147,19 +131,23 @@ class SmithWatermann
   end
  
   def match(i, j)
-    @score[i - 1][j - 1] + blosum_score(i, j)
+    score(i-1, j-1) + blosum_score(i, j)
   end
 
   def delete(i, j)
-    @score[i - 1][j] - GAP_PENALTY
+    score(i-1, j) - GAP_PENALTY
   end
 
   def insert(i, j)
-    @score[i][j-1] - GAP_PENALTY
+    score(i, j-1) - GAP_PENALTY
+  end
+
+  def score(i, j)
+    @score[i * @second_dna.length + j]
   end
 
   def blosum_score(i, j)
-    BLOSUM62[INDEX.index(@first_dna[i,1])][INDEX.index(@second_dna[j,1])]
+    BLOSUM62[INDEX.index(@first_dna[i])][INDEX.index(@second_dna[j])]
   end
 end
 
