@@ -64,31 +64,16 @@ class SmithWatermann
     end
   end
 
-  #Does the main logic of filling in score matrix
   def run
-    traceback
-
-    p @second_dna
-    p @score
-  end
-
-  def traceback
     p @score
 
-    max, maxI, maxJ = @score.max
+    max, i, j = @score.max
+    puts "Highest value is #{max} at #{i} #{j}"
 
-    puts "Highest value is #{max} at #{maxI} #{maxJ}"
-    i = maxI
-    j = maxJ
-    top_string = @first_dna[maxI]
-    
-    if ismatch?(maxI, maxJ)
-      mid_string = @first_dna[maxI]
-    else
-      mid_string = '+'
-    end 
-    
-    bot_string = @second_dna[maxJ]
+    top_string = @first_dna[i]
+    mid_string = '+'
+    bot_string = @second_dna[j]
+    mid_string = top_string if top_string == bot_string
 
     while (true)
       up = @score[i-1, j]
@@ -130,18 +115,20 @@ class SmithWatermann
         bot_string = @second_dna[j] + bot_string
         mid_string = ' ' + mid_string
       end
-      if (i == 0 && j == 0)
-        break
-      end
-      if (@score[i, j] == 0)
-        break 
-      end
+
+      break if (i == 0 && j == 0)
+      break if (@score[i, j] == 0)
     end
+
     strTop = "#{j} #{bot_string}"
     strBot = "#{i} #{top_string}"
+
     p strTop
     p '  ' + mid_string
     p strBot
+
+    p @second_dna
+    p @score
   end
 
   def ismatch?(i, j)
