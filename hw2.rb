@@ -50,7 +50,7 @@ class SmithWatermann
     traceback
 
     p @second_dna
-    @score.each {|i| p i }
+    p @score
   end
 
   def traceback
@@ -59,13 +59,13 @@ class SmithWatermann
     max = @score.max
     maxI, maxJ = @score.index(max).divmod(@second_dna.length)
 
-    puts "Highest value is " + max.to_s + " at " + maxI.to_s + " " + maxJ.to_s
+    puts "Highest value is #{max} at #{maxI} #{maxJ}"
     i = maxI
     j = maxJ
     top_string = @first_dna[maxI]
     
     if ismatch?(maxI, maxJ)
-      mid_string = @first_dna[maxI].to_s
+      mid_string = @first_dna[maxI]
     else
       mid_string = '+'
     end 
@@ -74,9 +74,9 @@ class SmithWatermann
 
     while (true)
       up = score(i-1, j)
-      p 'upscale is' + up.to_s
+      p "upscale is #{up}"
       left = score(i, j-1)
-      p 'leftscore is' + left.to_s
+      p "leftscore is #{left}"
       maxUpLeft = [up, left].max
       # is it a match/mismatch?
       valMatch = score(i-1, j-1)
@@ -88,29 +88,29 @@ class SmithWatermann
         if (valMatch <= 0)
           break
         end
-        top_string = @first_dna[i].to_s + top_string.to_s
-        bot_string = @second_dna[j].to_s + bot_string.to_s
+        top_string = @first_dna[i] + top_string
+        bot_string = @second_dna[j] + bot_string
         if ismatch?(i, j)
-          mid_string = @first_dna[i].to_s + mid_string.to_s
+          mid_string = @first_dna[i] + mid_string
         elsif blosum_score(i, j) > 0
-          mid_string = '+' + mid_string.to_s
+          mid_string = '+' + mid_string
         else
-          mid_string = ' ' + mid_string.to_s
+          mid_string = ' ' + mid_string
         end 
       elsif up > left
         p 'Chose up path'
         i = i-1
         j = j
-        top_string = @first_dna[i].to_s + top_string.to_s
-        bot_string = '-' + bot_string.to_s
-        mid_string = ' ' + mid_string.to_s
+        top_string = @first_dna[i] + top_string
+        bot_string = '-' + bot_string
+        mid_string = ' ' + mid_string
       else
         p 'Chose left path'
         i = i
         j = j - 1
-        top_string = '-' + top_string.to_s
-        bot_string = @second_dna[j].to_s + bot_string.to_s
-        mid_string = ' ' + mid_string.to_s
+        top_string = '-' + top_string
+        bot_string = @second_dna[j] + bot_string
+        mid_string = ' ' + mid_string
       end
       if (i == 0 && j == 0)
         break
@@ -119,11 +119,11 @@ class SmithWatermann
         break 
       end
     end
-     strTop = j.to_s + ' ' + bot_string
-     strBot = i.to_s + ' ' + top_string
-     p strTop
-     p '  ' + mid_string
-     p strBot
+    strTop = "#{j} #{bot_string}"
+    strBot = "#{i} #{top_string}"
+    p strTop
+    p '  ' + mid_string
+    p strBot
   end
 
   def ismatch?(i, j)
