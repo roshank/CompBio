@@ -1,12 +1,33 @@
 class SmithWatermann
-  # ANDQC
-  # 
-  # RND-C 
+  class Score
+    def initialize(x, y)
+      @y = y
+      @score = Array.new(x*y, 0)
+    end
+
+    def [](i, j)
+      @score[i*@y + j]
+    end
+
+    def []=(i, j, val)
+      @score[i*@y + j] = val
+    end
+
+    def max
+      max = @score.max
+      i, j = @score.index(max).divmod(@y)
+      [max, i, j]
+    end
+
+    def to_s
+      @score.inspect
+    end
+  end
 
   GAP_PENALTY = 4
-  INDEX = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','Y','V','B','Z','X']
+  INDEX = %w[ A R N D C Q E G H I L K M F P S T W Y V B Z X ]
   BLOSUM62 = [
-    [ 4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0, -2, -1,  0 ],
+    [  4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0, -2, -1,  0 ],
     [ -1,  5,  0, -2, -3,  1,  0, -2,  0, -3, -2,  2, -1, -3, -2, -1, -1, -3, -2, -3, -1,  0, -1 ], 
     [ -2,  0,  6,  1, -3,  0,  0,  0,  1, -3, -3,  0, -2, -3, -2,  1,  0, -4, -2, -3,  3,  0, -1 ],
     [ -2, -2,  1,  6, -3,  0,  2, -1, -1, -3, -4, -1, -3, -3, -1,  0, -1, -4, -3, -3,  4,  1, -1 ],
@@ -35,18 +56,16 @@ class SmithWatermann
     @first_dna = " #{first_dna.upcase}"
     @second_dna = " #{second_dna.upcase}"
 
-    # @score = Array.new(@first_dna.length) { Array.new(@second_dna.length, 0) }
-    @score = Array.new(@first_dna.length * @second_dna.length, 0)
+    @score = Score.new(@first_dna.length, @second_dna.length)
+    (1...@first_dna.length).each do |i|
+      (1...@second_dna.length).each do |j|
+        @score[i,j] = [0, match(i,j), delete(i,j), insert(i,j)].max
+      end
+    end
   end
 
   #Does the main logic of filling in score matrix
   def run
-    (1...@first_dna.length).each do |i|
-      (1...@second_dna.length).each do |j|
-        @score[i*@second_dna.length + j] = [0, match(i,j), delete(i,j), insert(i,j)].max
-      end
-    end
-
     traceback
 
     p @second_dna
@@ -56,8 +75,7 @@ class SmithWatermann
   def traceback
     p @score
 
-    max = @score.max
-    maxI, maxJ = @score.index(max).divmod(@second_dna.length)
+    max, maxI, maxJ = @score.max
 
     puts "Highest value is #{max} at #{maxI} #{maxJ}"
     i = maxI
@@ -73,13 +91,13 @@ class SmithWatermann
     bot_string = @second_dna[maxJ]
 
     while (true)
-      up = score(i-1, j)
-      p "upscale is #{up}"
-      left = score(i, j-1)
+      up = @score[i-1, j]
+      p "upscore is #{up}"
+      left = @score[i, j-1]
       p "leftscore is #{left}"
       maxUpLeft = [up, left].max
       # is it a match/mismatch?
-      valMatch = score(i-1, j-1)
+      valMatch = @score[i-1, j-1]
       if (valMatch >= maxUpLeft)
  
         p 'Match or Positive Mismatch'
@@ -115,7 +133,7 @@ class SmithWatermann
       if (i == 0 && j == 0)
         break
       end
-      if (score(i,j) == 0)
+      if (@score[i, j] == 0)
         break 
       end
     end
@@ -131,19 +149,15 @@ class SmithWatermann
   end
  
   def match(i, j)
-    score(i-1, j-1) + blosum_score(i, j)
+    @score[i-1, j-1] + blosum_score(i, j)
   end
 
   def delete(i, j)
-    score(i-1, j) - GAP_PENALTY
+    @score[i-1, j] - GAP_PENALTY
   end
 
   def insert(i, j)
-    score(i, j-1) - GAP_PENALTY
-  end
-
-  def score(i, j)
-    @score[i * @second_dna.length + j]
+    @score[i, j-1] - GAP_PENALTY
   end
 
   def blosum_score(i, j)
