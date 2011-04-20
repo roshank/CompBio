@@ -1,5 +1,36 @@
 require 'logger'
 
+class Permuter
+  def initialize(first_dna, second_dna, points)
+    @logger = Logger.new(STDOUT)
+    @logger.level = Logger::WARN
+    @true_score = points
+    @first_dna = "#{first_dna.upcase}"
+    @second_dna = "#{second_dna.upcase}"
+  end
+  
+  def permute(n)
+    counter = n
+    k = 0
+    while (counter > 0)
+      permuted_dna = @first_dna
+      (0...permuted_dna.length).each do |i|
+        j = rand(i)
+        tmp = permuted_dna[i]
+        permuted_dna[i] = permuted_dna[j]
+        permuted_dna[j] = tmp
+      end
+      sw = SmithWatermann.new(permuted_dna, @second_dna)
+      counter -= 1
+      if (sw.run > @true_score)
+        k+=1
+      end
+    end
+    pval = (Float(k+1) / Float(n+1))
+    @logger.warn('pVal ' + pval.to_s + ' over ' + n.to_s + ' permutations')
+  end
+end
+
 class SmithWatermann
   class Score
     def initialize(x, y)
@@ -57,10 +88,10 @@ class SmithWatermann
   def initialize(first_dna, second_dna)
     @logger = Logger.new(STDOUT)
     @logger.level = Logger::WARN
-
+    
     @first_dna = " #{first_dna.upcase}"
     @second_dna = " #{second_dna.upcase}"
-
+    
     @score = Score.new(@first_dna.length, @second_dna.length)
     (1...@first_dna.length).each do |i|
       (1...@second_dna.length).each do |j|
@@ -71,10 +102,13 @@ class SmithWatermann
 
   def run
     @logger.debug(@score)
-
+    max, i, j = @score.max
+    return max
+  end
+  
+  def print
     max, i, j = @score.max
     @logger.debug("Highest value is #{max} at #{i} #{j}")
-
     top_string = @first_dna[i].chr
     bot_string = @second_dna[j].chr
     mid_string = (top_string == bot_string) ? @first_dna[i].chr : '+'
@@ -126,10 +160,10 @@ class SmithWatermann
     top_string.reverse!
     mid_string.reverse!
     bot_string.reverse!
-
+    
     strTop = "#{j} #{bot_string}"
     strBot = "#{i} #{top_string}"
-
+    
     p strTop
     p '  ' + mid_string
     p strBot
@@ -159,9 +193,15 @@ class SmithWatermann
   end
 end
 
+
 if __FILE__ == $0
   # Uh - right now first should be SECOND (aka bottom)
   # and second is first - aka TOP string. crazy, right?
-  sw = SmithWatermann.new('deadly', 'ddgearlyk')
-  sw.run
+  #sw = SmithWatermann.new('deadly', 'ddgearlyk')
+  #perm = Permuter.new('deadly', 'ddgearlyk', sw.run)
+  sw = SmithWatermann.new('ddgearlyk', 'deadly')
+  perm = Permuter.new('ddgearlyk', 'deadly', sw.run)
+  
+  perm.permute(10000)
+  sw.print
 end
