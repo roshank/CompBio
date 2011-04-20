@@ -34,7 +34,7 @@ class Permuter
   end
 end
 
-module SmithWaterman
+class SmithWaterman
   class Matrix
     GAP_PENALTY = 4
     INDEX = %w[ a r n d c q e g h i l k m f p s t w y v b z x ]
