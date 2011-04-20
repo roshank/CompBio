@@ -81,30 +81,29 @@ class SmithWatermann
 
     while (true)
       up = @score[i-1, j]
-      @logger.debug("upscore is #{up}")
       left = @score[i, j-1]
-      @logger.debug("leftscore is #{left}")
-      maxUpLeft = [up, left].max
-      # is it a match/mismatch?
-      valMatch = @score[i-1, j-1]
+      up_left = @score[i-1, j-1]
 
-      if (valMatch >= maxUpLeft)
- 
+      @logger.debug("upscore is #{up}")
+      @logger.debug("leftscore is #{left}")
+
+      if up_left >= [up, left].max
         @logger.debug('Match or Positive Mismatch')
+
         i -= 1
         j -= 1
-        if (valMatch <= 0)
-          break
-        end
+        break if (up_left <= 0)
+
         top_string << @first_dna[i].chr
         bot_string << @second_dna[j].chr
-        if ismatch?(i, j)
-          mid_string << @first_dna[i].chr
-        elsif blosum_score(i, j) > 0
-          mid_string << '+'
-        else
-          mid_string << ' '
-        end 
+
+        mid_string << if ismatch?(i, j)
+                        @first_dna[i].chr
+                      elsif blosum_score(i, j) > 0
+                        '+'
+                      else
+                        ' '
+                      end 
       elsif up > left
         @logger.debug('Chose up path')
         i -= 1
