@@ -1,6 +1,6 @@
 require 'logger'
+require 'minitest/autorun'
 require 'net/http'
-
 
 class Permuter
   def initialize(first_dna, second_dna, points)
@@ -24,7 +24,7 @@ class Permuter
       end
       sw = SmithWatermann.new(permuted_dna, @second_dna)
       counter -= 1
-      if (sw.run > @true_score)
+      if (sw.score.max > @true_score)
         k+=1
       end
     end
@@ -36,61 +36,91 @@ end
 
 class SmithWatermann
   class Score
+    GAP_PENALTY = 4
+    INDEX = %w[ a r n d c q e g h i l k m f p s t w y v b z x ]
+    BLOSUM62 = [
+      [  4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0, -2, -1,  0 ],
+      [ -1,  5,  0, -2, -3,  1,  0, -2,  0, -3, -2,  2, -1, -3, -2, -1, -1, -3, -2, -3, -1,  0, -1 ], 
+      [ -2,  0,  6,  1, -3,  0,  0,  0,  1, -3, -3,  0, -2, -3, -2,  1,  0, -4, -2, -3,  3,  0, -1 ],
+      [ -2, -2,  1,  6, -3,  0,  2, -1, -1, -3, -4, -1, -3, -3, -1,  0, -1, -4, -3, -3,  4,  1, -1 ],
+      [  0, -3, -3, -3,  9, -3, -4, -3, -3, -1, -1, -3, -1, -2, -3, -1, -1, -2, -2, -1, -3, -3, -2 ],
+      [ -1,  1,  0,  0, -3,  5,  2, -2,  0, -3, -2,  1,  0, -3, -1,  0, -1, -2, -1, -2,  0,  3, -1 ],
+      [ -1,  0,  0,  2, -4,  2,  5, -2,  0, -3, -3,  1, -2, -3, -1,  0, -1, -3, -2, -2,  1,  4, -1 ],
+      [  0, -2,  0, -1, -3, -2, -2,  6, -2, -4, -4, -2, -3, -3, -2,  0, -2, -2, -3, -3, -1, -2, -1 ],
+      [ -2,  0,  1, -1, -3,  0,  0, -2,  8, -3, -3, -1, -2, -1, -2, -1, -2, -2,  2, -3,  0,  0, -1 ],
+      [ -1, -3, -3, -3, -1, -3, -3, -4, -3,  4,  2, -3,  1,  0, -3, -2, -1, -3, -1,  3, -3, -3, -1 ],
+      [ -1, -2, -3, -4, -1, -2, -3, -4, -3,  2,  4, -2,  2,  0, -3, -2, -1, -2, -1,  1, -4, -3, -1 ],
+      [ -1,  2,  0, -1, -3,  1,  1, -2, -1, -3, -2,  5, -1, -3, -1,  0, -1, -3, -2, -2,  0,  1, -1 ],
+      [ -1, -1, -2, -3, -1,  0, -2, -3, -2,  1,  2, -1,  5,  0, -2, -1, -1, -1, -1,  1, -3, -1, -1 ],
+      [ -2, -3, -3, -3, -2, -3, -3, -3, -1,  0,  0, -3,  0,  6, -4, -2, -2,  1,  3, -1, -3, -3, -1 ],
+      [ -1, -2, -2, -1, -3, -1, -1, -2, -2, -3, -3, -1, -2, -4,  7, -1, -1, -4, -3, -2, -2, -1, -2 ],
+      [  1, -1,  1,  0, -1,  0,  0,  0, -1, -2, -2,  0, -1, -2, -1,  4,  1, -3, -2, -2,  0,  0,  0 ],
+      [  0, -1,  0, -1, -1, -1, -1, -2, -2, -1, -1, -1, -1, -2, -1,  1,  5, -2, -2,  0, -1, -1,  0 ],
+      [ -3, -3, -4, -4, -2, -2, -3, -2, -2, -3, -2, -3, -1,  1, -4, -3, -2, 11,  2, -3, -4, -3, -2 ],
+      [ -2, -2, -2, -3, -2, -1, -2, -3,  2, -1, -1, -2, -1,  3, -3, -2, -2,  2,  7, -1, -3, -2, -1 ],
+      [  0, -3, -3, -3, -1, -2, -2, -3, -3,  3,  1, -2,  1, -1, -2, -2,  0, -3, -1,  4, -3, -2, -1 ],
+      [ -2, -1,  3,  4, -3,  0,  1, -1,  0, -3, -4,  0, -3, -3, -2,  0, -1, -4, -3, -3,  4,  1, -1 ],
+      [ -1,  0,  0,  1, -3,  3,  4, -2,  0, -3, -3,  1, -1, -3, -1,  0, -1, -3, -2, -2,  1,  4, -1 ],
+      [  0, -1, -1, -1, -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -2,  0,  0, -2, -1, -1, -1, -1, -1 ]
+    ] 
+
     def initialize(x, y)
-      @y = y
-      @score = Array.new(x*y, 0)
+      @x = x.downcase
+      @y = y.downcase
+      @score = Array.new(@x.length) { Array.new(@y.length, 0) }
+      (1...@x.length).each do |i|
+        (1...@y.length).each do |j|
+          @score[i][j] = [0, match(i,j), delete(i,j), insert(i,j)].max
+        end
+      end
     end
 
     def [](i, j)
-      @score[i*@y + j]
+      @score[i][j]
     end
 
     def []=(i, j, val)
-      @score[i*@y + j] = val
-    end
-    
-    def subseq(i)
-      return @score[i*@y..(((i+1)*@y)-1)]
+      @score[i][j] = val
     end
 
     def max
-      max = @score.max
-      i, j = @score.index(max).divmod(@y)
-      [max, i, j]
+      @score.flatten.max
+    end
+
+    def index(value)
+      @score.flatten.index(value).divmod(@y.length)
     end
 
     def to_s
+      out = "  #{@y.split(//).join('  ')}\n"
+      @score.each_with_index do |row,i|
+        out << @x[i] << ' ' << row.join('  ') << "\n"
+      end
+      out
+    end
+
+    def inspect
       @score.inspect
+    end
+
+    def match(i, j)
+      @score[i-1][j-1] + blosum_score(i, j)
+    end
+
+    def delete(i, j)
+      @score[i-1][j] - GAP_PENALTY
+    end
+
+    def insert(i, j)
+      @score[i][j-1] - GAP_PENALTY
+    end
+
+    def blosum_score(i, j)
+      BLOSUM62[INDEX.index(@x[i].chr)][INDEX.index(@y[j].chr)]
     end
   end
 
-  GAP_PENALTY = 4
-  INDEX = %w[ A R N D C Q E G H I L K M F P S T W Y V B Z X ]
-  BLOSUM62 = [
-    [  4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0, -2, -1,  0 ],
-    [ -1,  5,  0, -2, -3,  1,  0, -2,  0, -3, -2,  2, -1, -3, -2, -1, -1, -3, -2, -3, -1,  0, -1 ], 
-    [ -2,  0,  6,  1, -3,  0,  0,  0,  1, -3, -3,  0, -2, -3, -2,  1,  0, -4, -2, -3,  3,  0, -1 ],
-    [ -2, -2,  1,  6, -3,  0,  2, -1, -1, -3, -4, -1, -3, -3, -1,  0, -1, -4, -3, -3,  4,  1, -1 ],
-    [  0, -3, -3, -3,  9, -3, -4, -3, -3, -1, -1, -3, -1, -2, -3, -1, -1, -2, -2, -1, -3, -3, -2 ],
-    [ -1,  1,  0,  0, -3,  5,  2, -2,  0, -3, -2,  1,  0, -3, -1,  0, -1, -2, -1, -2,  0,  3, -1 ],
-    [ -1,  0,  0,  2, -4,  2,  5, -2,  0, -3, -3,  1, -2, -3, -1,  0, -1, -3, -2, -2,  1,  4, -1 ],
-    [  0, -2,  0, -1, -3, -2, -2,  6, -2, -4, -4, -2, -3, -3, -2,  0, -2, -2, -3, -3, -1, -2, -1 ],
-    [ -2,  0,  1, -1, -3,  0,  0, -2,  8, -3, -3, -1, -2, -1, -2, -1, -2, -2,  2, -3,  0,  0, -1 ],
-    [ -1, -3, -3, -3, -1, -3, -3, -4, -3,  4,  2, -3,  1,  0, -3, -2, -1, -3, -1,  3, -3, -3, -1 ],
-    [ -1, -2, -3, -4, -1, -2, -3, -4, -3,  2,  4, -2,  2,  0, -3, -2, -1, -2, -1,  1, -4, -3, -1 ],
-    [ -1,  2,  0, -1, -3,  1,  1, -2, -1, -3, -2,  5, -1, -3, -1,  0, -1, -3, -2, -2,  0,  1, -1 ],
-    [ -1, -1, -2, -3, -1,  0, -2, -3, -2,  1,  2, -1,  5,  0, -2, -1, -1, -1, -1,  1, -3, -1, -1 ],
-    [ -2, -3, -3, -3, -2, -3, -3, -3, -1,  0,  0, -3,  0,  6, -4, -2, -2,  1,  3, -1, -3, -3, -1 ],
-    [ -1, -2, -2, -1, -3, -1, -1, -2, -2, -3, -3, -1, -2, -4,  7, -1, -1, -4, -3, -2, -2, -1, -2 ],
-    [  1, -1,  1,  0, -1,  0,  0,  0, -1, -2, -2,  0, -1, -2, -1,  4,  1, -3, -2, -2,  0,  0,  0 ],
-    [  0, -1,  0, -1, -1, -1, -1, -2, -2, -1, -1, -1, -1, -2, -1,  1,  5, -2, -2,  0, -1, -1,  0 ],
-    [ -3, -3, -4, -4, -2, -2, -3, -2, -2, -3, -2, -3, -1,  1, -4, -3, -2, 11,  2, -3, -4, -3, -2 ],
-    [ -2, -2, -2, -3, -2, -1, -2, -3,  2, -1, -1, -2, -1,  3, -3, -2, -2,  2,  7, -1, -3, -2, -1 ],
-    [  0, -3, -3, -3, -1, -2, -2, -3, -3,  3,  1, -2,  1, -1, -2, -2,  0, -3, -1,  4, -3, -2, -1 ],
-    [ -2, -1,  3,  4, -3,  0,  1, -1,  0, -3, -4,  0, -3, -3, -2,  0, -1, -4, -3, -3,  4,  1, -1 ],
-    [ -1,  0,  0,  1, -3,  3,  4, -2,  0, -3, -3,  1, -1, -3, -1,  0, -1, -3, -2, -2,  1,  4, -1 ],
-    [  0, -1, -1, -1, -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -2,  0,  0, -2, -1, -1, -1, -1, -1 ]
-  ] 
+  attr_reader :score
 
   def initialize(first_dna, second_dna)
     @logger = Logger.new(STDOUT)
@@ -99,47 +129,12 @@ class SmithWatermann
     @first_dna = " #{first_dna.upcase}"
     @second_dna = " #{second_dna.upcase}"
     
-    @score = Score.new(@first_dna.length, @second_dna.length)
-    p @first_dna.length
-    p @second_dna.length
-    (1...@first_dna.length).each do |i|
-      (1...@second_dna.length).each do |j|
-        @score[i,j] = [0, match(i,j), delete(i,j), insert(i,j)].max
-      end
-      p @score.to_s
-    end
+    @score = Score.new(@first_dna, @second_dna)
   end
 
-  def run
-    @logger.debug(@score)
-    max, i, j = @score.max
-    return max
-  end
-  
-  def print_score
-    p @first_dna
-    p @score.to_s
-   
-    j = 0
-    outputline = "  "
-    @second_dna.each_char do |x|
-      outputline += ' ' + x.to_s + ' '
-    end
-    p outputline
-    
-    while j < @first_dna.length
-      subseq = @score.subseq(j)
-      outputline = ""
-      subseq.each do |x|
-        outputline += ' ' + x.to_s + ' '
-      end
-      p "#{@first_dna[j,1]} #{outputline}"
-      j+=1
-    end
-  end
-  
   def print(first_prefix, second_prefix)
-    max, i, j = @score.max
+    max = @score.max
+    i, j = @score.index(max)
     @logger.debug("Highest value is #{max} at #{i} #{j}")
     top_string = @first_dna[i].chr
     bot_string = @second_dna[j].chr
@@ -163,9 +158,9 @@ class SmithWatermann
         top_string << @first_dna[i].chr
         bot_string << @second_dna[j].chr
 
-        mid_string << if ismatch?(i, j)
+        mid_string << if @first_dna[i] == @second_dna[j]
                         @first_dna[i].chr
-                      elsif blosum_score(i, j) > 0
+                      elsif @score.blosum_score(i, j) > 0
                         '+'
                       else
                         ' '
@@ -201,8 +196,6 @@ class SmithWatermann
 
     mid_skip_char = " ".center([top_prefix.length, bot_prefix.length].max - 1)
     
-    
-    
     strTop = "#{bot_string}"
     strBot = "#{top_string}"
     strMid = " #{mid_string}"
@@ -219,26 +212,6 @@ class SmithWatermann
     
     @logger.debug(@score)
   end
-
-  def ismatch?(i, j)
-    @first_dna[i] == @second_dna[j]
-  end
- 
-  def match(i, j)
-    @score[i-1, j-1] + blosum_score(i, j)
-  end
-
-  def delete(i, j)
-    @score[i-1, j] - GAP_PENALTY
-  end
-
-  def insert(i, j)
-    @score[i, j-1] - GAP_PENALTY
-  end
-
-  def blosum_score(i, j)
-    BLOSUM62[INDEX.index(@first_dna[i].chr)][INDEX.index(@second_dna[j].chr)]
-  end
 end
 
 def get_fasta(code)
@@ -253,12 +226,28 @@ def get_fasta(code)
   return dna
 end
 
+# class TestSmithWatermann < MiniTest::Unit::TestCase
+#   TEST_SET = [
+#     %w[ TEST1 ddgearlyk ],
+#     %w[ TEST2 deadly ]
+#   ]
+# 
+#   REALDATA = %w[P15172 P17542 P10085 P16075 P13904 Q90477 Q8IU24 P22816 Q10574 O95363]
+# 
+#   def test_sw
+#     score = SmithWatermann::Score.new('ddgearlyk', 'deadly')
+#     sw = SmithWatermann.new('ddgearlyk', 'deadly')
+#     perm = Permuter.new('ddgearlyk', 'deadly', score.max[0])
+#     perm.permute(1)
+#     sw.print('TEST1', 'TEST2')
+#     assert_equal(1, 2)
+#   end
+# end
+
 TESTSET = [['TEST1','ddgearlyk'],['TEST2','deadly']]
 
 REALDATA = %w[P15172 P17542 P10085 P16075 P13904 Q90477 Q8IU24 P22816 Q10574 O95363]
 
-
-DO_TEST = 1
 DO_ALIGN = 0
 DO_PVAL = 0
 
@@ -267,19 +256,15 @@ DO_PVAL = 0
 #          [],
 #          [],
 if __FILE__ == $0
-  # Uh - right now first should be SECOND (aka bottom)
-  # and second is first - aka TOP string. crazy, right?
-  #sw = SmithWatermann.new('deadly', 'ddgearlyk')
-  #perm = Permuter.new('deadly', 'ddgearlyk', sw.run)
-  if DO_TEST == 1
-    (0...TESTSET.length).each do |i|
-      (i+1...TESTSET.length).each do |j|
-        sw = SmithWatermann.new(TESTSET[i][1], TESTSET[j][1])
-        perm = Permuter.new(TESTSET[i][1], TESTSET[j][1], sw.run)
-        perm.permute(1)
-        sw.print(TESTSET[i][0], TESTSET[j][0])
-        sw.print_score
-      end
+  (0...TESTSET.length).each do |i|
+    (i+1...TESTSET.length).each do |j|
+      score = SmithWatermann::Score.new(TESTSET[i][1], TESTSET[j][1])
+      perm = Permuter.new(TESTSET[i][1], TESTSET[j][1], score.max)
+      perm.permute(1)
+
+      sw = SmithWatermann.new(TESTSET[i][1], TESTSET[j][1])
+      sw.print(TESTSET[i][0], TESTSET[j][0])
+      puts sw.score
     end
   end
   
@@ -309,4 +294,3 @@ if __FILE__ == $0
   end
   
 end
-
