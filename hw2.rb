@@ -1,4 +1,6 @@
 require 'logger'
+require 'net/http'
+
 
 class Permuter
   def initialize(first_dna, second_dna, points)
@@ -27,7 +29,8 @@ class Permuter
       end
     end
     pval = (Float(k+1) / Float(n+1))
-    @logger.warn('pVal ' + pval.to_s + ' over ' + n.to_s + ' permutations')
+    @logger.debug('pVal ' + pval.to_s + ' over ' + n.to_s + ' permutations')
+    return pval
   end
 end
 
@@ -106,7 +109,7 @@ class SmithWatermann
     return max
   end
   
-  def print
+  def print(first_prefix, second_prefix)
     max, i, j = @score.max
     @logger.debug("Highest value is #{max} at #{i} #{j}")
     top_string = @first_dna[i].chr
@@ -161,14 +164,31 @@ class SmithWatermann
     mid_string.reverse!
     bot_string.reverse!
     
-    strTop = "#{j} #{bot_string}"
-    strBot = "#{i} #{top_string}"
+    first_prefix = "#{first_prefix} #{i} "
+    second_prefix = "#{second_prefix} #{j} "
     
-    p strTop
-    p '  ' + mid_string
-    p strBot
+    prefixBuffer = [first_prefix.length, second_prefix.length].max
+    top_prefix = second_prefix.center(prefixBuffer)
+    bot_prefix = first_prefix.center(prefixBuffer)
 
-    p @second_dna
+    mid_skip_char = " ".center([top_prefix.length, bot_prefix.length].max - 1)
+    
+    
+    
+    strTop = "#{bot_string}"
+    strBot = "#{top_string}"
+    strMid = " #{mid_string}"
+  
+    lines = [strTop.length, strMid.length, strBot.length].max / 60
+    i = 0
+    while i <= lines
+      pos = i*60
+      p "#{bot_prefix}" + strTop[pos, pos+60]
+      p "#{mid_skip_char}" + strMid[pos, pos+60]
+      p "#{top_prefix}" + strBot[pos, pos+60]
+      i+=1
+    end
+    
     @logger.debug(@score)
   end
 
@@ -193,15 +213,71 @@ class SmithWatermann
   end
 end
 
+def get_fasta(code)
+  html = Net::HTTP.get URI.parse("http://www.uniprot.org/uniprot/#{code}.fasta")
+  html = html.split(%r{\n})
+  dna = ""
+  html.each_index do |i|
+    unless i == 0
+      dna = dna + html[i]
+    end
+  end
+  return dna
+end
 
+TESTSET = [['TEST1','ddgearlyk'],['TEST2','deadly']]
+
+REALDATA = %w[P15172 P17542 P10085 P16075 P13904 Q90477 Q8IU24 P22816 Q10574 O95363]
+
+
+DO_TEST = 0
+DO_ALIGN = 0
+DO_PVAL = 1
+
+#DNASET = [['P15172','MELLSPPLRDVDLTAPDGSLCSFATTDDFYDDPCFDSPDLRFFEDLDPRLMHVGALLKPEEHSHFPAAVHPAPGAREDEHVRAPSGHHQAGRCLLWACKACKRKTTNADRRKAATMRERRRLSKVNEAFETLKRCTSSNPNQRLPKVEILRNAIRYIEGLQALLRDQDAAPPGAAAAFYAPGPLPPGRGGEHYSGDSDASSPRSNCSDGMMDYSGPPSGARRRNCYEGAYYNEAPSEPRPGKSAAVSSLDCLSSIVERISTESPAAPALLLADVPSESPPRRQEAAAPSEGESSGDPTQSPDAAPQCPAGANPNPIYQVL'],
+#          ['P17542','MTERPPSEAARSDPQLEGRDAAEASMAPPHLVLLNGVAKETSRAAAAEPPVIELGARGGPGGGPAGGGGAARDLKGRDAATAEARHRVPTTELCRPPGPAPAPAPASVTAELPGDGRMVQLSPPALAAPAAPGRALLYSLSQPLASLGSGFFGEPDAFPMFTTNNRVKRRPSPYEMEITDGPHTKVVRRIFTNSRERWRQQNVNGAFAELRKLIPTHPPDKKLSKNEILRLAMKYINFLAKLLNDQEEEGTQRAKTGKDPVVGAGGGGGGGGGGAPPDDLLQDVLSPNSSCGSSLDGAASPDSYTEEPAPKHTARSLHPAMLPAADGAGPR'],          [],
+#          [],
+#          [],
 if __FILE__ == $0
   # Uh - right now first should be SECOND (aka bottom)
   # and second is first - aka TOP string. crazy, right?
   #sw = SmithWatermann.new('deadly', 'ddgearlyk')
   #perm = Permuter.new('deadly', 'ddgearlyk', sw.run)
-  sw = SmithWatermann.new('ddgearlyk', 'deadly')
-  perm = Permuter.new('ddgearlyk', 'deadly', sw.run)
+  if DO_TEST == 1
+    (0...TESTSET.length).each do |i|
+      (i+1...TESTSET.length).each do |j|
+        sw = SmithWatermann.new(TESTSET[i][1], TESTSET[j][1])
+        perm = Permuter.new(TESTSET[i][1], TESTSET[j][1], sw.run)
+        perm.permute(1)
+        sw.print(TESTSET[i][0], TESTSET[j][0])
+      end
+    end
+  end
   
-  perm.permute(10000)
-  sw.print
+  if DO_ALIGN == 1
+    (0...REALDATA.length).each do |i|
+      (i+1...REALDATA.length).each do |j|
+        dna1 = get_fasta(REALDATA[i])
+        dna2 = get_fasta(REALDATA[j])
+        sw = SmithWatermann.new(dna1, dna2)
+        perm = Permuter.new(dna1, dna2, sw.run)
+        #perm.permute(1)
+      
+        p "Matching DNA #{REALDATA[i]} #{REALDATA[j]}"
+        sw.print(REALDATA[i], REALDATA[j])
+      end
+    end
+  end
+  
+  if DO_PVAL == 1
+    sw = SmithWatermann.new(get_fasta('Q10574'),get_fasta('P15172'))
+    perm = Permuter.new(get_fasta('Q10574'),get_fasta('P15172'), sw.run)
+    p "Pval of P15172 : Q10574 on 1000 permutations is: #{perm.permute(1000)}"
+    
+    sw = SmithWatermann.new(get_fasta('O95363'),get_fasta('P15172'))
+    perm = Permuter.new(get_fasta('O95363'),get_fasta('P15172'), sw.run)
+    p "Pval of P15172 : O95363 on 1000 permutations is: #{perm.permute(1000)}"
+  end
+  
 end
+
