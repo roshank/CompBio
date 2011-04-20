@@ -6,7 +6,7 @@ class Permuter
   def initialize(first_dna, second_dna, points)
     @logger = Logger.new(STDOUT)
     @logger.level = Logger::WARN
-    @true_score = points
+    @true_matrix = points
     @first_dna = "#{first_dna.upcase}"
     @second_dna = "#{second_dna.upcase}"
   end
@@ -24,7 +24,7 @@ class Permuter
       end
       sw = SmithWaterman.new(permuted_dna, @second_dna)
       counter -= 1
-      if (sw.score.max > @true_score)
+      if (sw.matrix.max > @true_matrix)
         k+=1
       end
     end
@@ -34,8 +34,8 @@ class Permuter
   end
 end
 
-class SmithWaterman
-  class Score
+module SmithWaterman
+  class Matrix
     GAP_PENALTY = 4
     INDEX = %w[ a r n d c q e g h i l k m f p s t w y v b z x ]
     BLOSUM62 = [
@@ -67,60 +67,42 @@ class SmithWaterman
     def initialize(x, y)
       @x = x.downcase
       @y = y.downcase
-      @score = Array.new(@x.length) { Array.new(@y.length, 0) }
+      @matrix = Array.new(@x.length) { Array.new(@y.length, 0) }
+
+      # Build the matrix
       (1...@x.length).each do |i|
         (1...@y.length).each do |j|
-          @score[i][j] = [0, match(i,j), delete(i,j), insert(i,j)].max
+          @matrix[i][j] = [0, match(i,j), delete(i,j), insert(i,j)].max
         end
       end
     end
 
-    def [](i, j)
-      @score[i][j]
-    end
+    # Matrix operations
+    def [](i, j); @matrix[i][j]; end
+    def []=(i, j, val); @matrix[i][j] = val; end
+    def max; @matrix.flatten.max; end
+    def index(value); @matrix.flatten.index(value).divmod(@y.length); end
 
-    def []=(i, j, val)
-      @score[i][j] = val
-    end
-
-    def max
-      @score.flatten.max
-    end
-
-    def index(value)
-      @score.flatten.index(value).divmod(@y.length)
-    end
-
+    # Output
+    def inspect; @matrix.inspect; end
     def to_s
       out = "  #{@y.split(//).join('  ')}\n"
-      @score.each_with_index do |row,i|
+      @matrix.each_with_index do |row,i|
         out << @x[i] << ' ' << row.join('  ') << "\n"
       end
       out
     end
 
-    def inspect
-      @score.inspect
-    end
-
-    def match(i, j)
-      @score[i-1][j-1] + blosum_score(i, j)
-    end
-
-    def delete(i, j)
-      @score[i-1][j] - GAP_PENALTY
-    end
-
-    def insert(i, j)
-      @score[i][j-1] - GAP_PENALTY
-    end
-
-    def blosum_score(i, j)
+    # For building the matrix
+    def match(i, j); @matrix[i-1][j-1] + blosum(i, j); end
+    def delete(i, j); @matrix[i-1][j] - GAP_PENALTY; end
+    def insert(i, j); @matrix[i][j-1] - GAP_PENALTY; end
+    def blosum(i, j)
       BLOSUM62[INDEX.index(@x[i].chr)][INDEX.index(@y[j].chr)]
     end
   end
 
-  attr_reader :score
+  attr_reader :matrix
 
   def initialize(first_dna, second_dna)
     @logger = Logger.new(STDOUT)
@@ -129,24 +111,24 @@ class SmithWaterman
     @first_dna = " #{first_dna.upcase}"
     @second_dna = " #{second_dna.upcase}"
     
-    @score = Score.new(@first_dna, @second_dna)
+    @matrix = Matrix.new(@first_dna, @second_dna)
   end
   
   def print(first_prefix, second_prefix)
-    max = @score.max
-    i, j = @score.index(max)
+    max = @matrix.max
+    i, j = @matrix.index(max)
     @logger.debug("Highest value is #{max} at #{i} #{j}")
     top_string = @first_dna[i].chr
     bot_string = @second_dna[j].chr
     mid_string = (top_string == bot_string) ? @first_dna[i].chr : '+'
 
     while (true)
-      up = @score[i-1, j]
-      left = @score[i, j-1]
-      up_left = @score[i-1, j-1]
+      up = @matrix[i-1, j]
+      left = @matrix[i, j-1]
+      up_left = @matrix[i-1, j-1]
 
-      @logger.debug("upscore is #{up}")
-      @logger.debug("leftscore is #{left}")
+      @logger.debug("upmatrix is #{up}")
+      @logger.debug("leftmatrix is #{left}")
 
       if up_left >= [up, left].max
         @logger.debug('Match or Positive Mismatch')
@@ -160,7 +142,7 @@ class SmithWaterman
 
         mid_string << if @first_dna[i] == @second_dna[j]
                         @first_dna[i].chr
-                      elsif @score.blosum_score(i, j) > 0
+                      elsif @matrix.blosum(i, j) > 0
                         '+'
                       else
                         ' '
@@ -180,7 +162,7 @@ class SmithWaterman
       end
 
       break if (i == 0 && j == 0)
-      break if (@score[i, j] == 0)
+      break if (@matrix[i, j] == 0)
     end
 
     top_string.reverse!
@@ -210,7 +192,7 @@ class SmithWaterman
       i+=1
     end
     
-    @logger.debug(@score)
+    @logger.debug(@matrix)
   end
 end
 
@@ -235,9 +217,9 @@ end
 #   REALDATA = %w[P15172 P17542 P10085 P16075 P13904 Q90477 Q8IU24 P22816 Q10574 O95363]
 # 
 #   def test_sw
-#     score = SmithWaterman::Score.new('ddgearlyk', 'deadly')
+#     matrix = SmithWaterman::Matrix.new('ddgearlyk', 'deadly')
 #     sw = SmithWaterman.new('ddgearlyk', 'deadly')
-#     perm = Permuter.new('ddgearlyk', 'deadly', score.max[0])
+#     perm = Permuter.new('ddgearlyk', 'deadly', matrix.max[0])
 #     perm.permute(1)
 #     sw.print('TEST1', 'TEST2')
 #     assert_equal(1, 2)
@@ -262,13 +244,13 @@ DO_PVAL = 0
 if __FILE__ == $0
   (0...TESTDATA.length).each do |i|
     (i+1...TESTDATA.length).each do |j|
-      score = SmithWaterman::Score.new(TESTDATA[i][1], TESTDATA[j][1])
-      perm = Permuter.new(TESTDATA[i][1], TESTDATA[j][1], score.max)
+      matrix = SmithWaterman::Matrix.new(TESTDATA[i][1], TESTDATA[j][1])
+      perm = Permuter.new(TESTDATA[i][1], TESTDATA[j][1], matrix.max)
       perm.permute(1)
 
       sw = SmithWaterman.new(TESTDATA[i][1], TESTDATA[j][1])
       sw.print(TESTDATA[i][0], TESTDATA[j][0])
-      puts sw.score
+      puts sw.matrix
     end
   end
   
