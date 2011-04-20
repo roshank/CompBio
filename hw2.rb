@@ -48,6 +48,10 @@ class SmithWatermann
     def []=(i, j, val)
       @score[i*@y + j] = val
     end
+    
+    def subseq(i)
+      return @score[i*@y..(((i+1)*@y)-1)]
+    end
 
     def max
       max = @score.max
@@ -96,10 +100,13 @@ class SmithWatermann
     @second_dna = " #{second_dna.upcase}"
     
     @score = Score.new(@first_dna.length, @second_dna.length)
+    p @first_dna.length
+    p @second_dna.length
     (1...@first_dna.length).each do |i|
       (1...@second_dna.length).each do |j|
         @score[i,j] = [0, match(i,j), delete(i,j), insert(i,j)].max
       end
+      p @score.to_s
     end
   end
 
@@ -107,6 +114,28 @@ class SmithWatermann
     @logger.debug(@score)
     max, i, j = @score.max
     return max
+  end
+  
+  def print_score
+    p @first_dna
+    p @score.to_s
+   
+    j = 0
+    outputline = "  "
+    @second_dna.each_char do |x|
+      outputline += ' ' + x.to_s + ' '
+    end
+    p outputline
+    
+    while j < @first_dna.length
+      subseq = @score.subseq(j)
+      outputline = ""
+      subseq.each do |x|
+        outputline += ' ' + x.to_s + ' '
+      end
+      p "#{@first_dna[j,1]} #{outputline}"
+      j+=1
+    end
   end
   
   def print(first_prefix, second_prefix)
@@ -230,9 +259,9 @@ TESTSET = [['TEST1','ddgearlyk'],['TEST2','deadly']]
 REALDATA = %w[P15172 P17542 P10085 P16075 P13904 Q90477 Q8IU24 P22816 Q10574 O95363]
 
 
-DO_TEST = 0
+DO_TEST = 1
 DO_ALIGN = 0
-DO_PVAL = 1
+DO_PVAL = 0
 
 #DNASET = [['P15172','MELLSPPLRDVDLTAPDGSLCSFATTDDFYDDPCFDSPDLRFFEDLDPRLMHVGALLKPEEHSHFPAAVHPAPGAREDEHVRAPSGHHQAGRCLLWACKACKRKTTNADRRKAATMRERRRLSKVNEAFETLKRCTSSNPNQRLPKVEILRNAIRYIEGLQALLRDQDAAPPGAAAAFYAPGPLPPGRGGEHYSGDSDASSPRSNCSDGMMDYSGPPSGARRRNCYEGAYYNEAPSEPRPGKSAAVSSLDCLSSIVERISTESPAAPALLLADVPSESPPRRQEAAAPSEGESSGDPTQSPDAAPQCPAGANPNPIYQVL'],
 #          ['P17542','MTERPPSEAARSDPQLEGRDAAEASMAPPHLVLLNGVAKETSRAAAAEPPVIELGARGGPGGGPAGGGGAARDLKGRDAATAEARHRVPTTELCRPPGPAPAPAPASVTAELPGDGRMVQLSPPALAAPAAPGRALLYSLSQPLASLGSGFFGEPDAFPMFTTNNRVKRRPSPYEMEITDGPHTKVVRRIFTNSRERWRQQNVNGAFAELRKLIPTHPPDKKLSKNEILRLAMKYINFLAKLLNDQEEEGTQRAKTGKDPVVGAGGGGGGGGGGAPPDDLLQDVLSPNSSCGSSLDGAASPDSYTEEPAPKHTARSLHPAMLPAADGAGPR'],          [],
@@ -250,6 +279,7 @@ if __FILE__ == $0
         perm = Permuter.new(TESTSET[i][1], TESTSET[j][1], sw.run)
         perm.permute(1)
         sw.print(TESTSET[i][0], TESTSET[j][0])
+        sw.print_score
       end
     end
   end
