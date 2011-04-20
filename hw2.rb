@@ -22,7 +22,7 @@ class Permuter
         permuted_dna[i] = permuted_dna[j]
         permuted_dna[j] = tmp
       end
-      sw = SmithWatermann.new(permuted_dna, @second_dna)
+      sw = SmithWaterman.new(permuted_dna, @second_dna)
       counter -= 1
       if (sw.score.max > @true_score)
         k+=1
@@ -34,7 +34,7 @@ class Permuter
   end
 end
 
-class SmithWatermann
+class SmithWaterman
   class Score
     GAP_PENALTY = 4
     INDEX = %w[ a r n d c q e g h i l k m f p s t w y v b z x ]
@@ -226,7 +226,7 @@ def get_fasta(code)
   return dna
 end
 
-# class TestSmithWatermann < MiniTest::Unit::TestCase
+# class TestSmithWaterman < MiniTest::Unit::TestCase
 #   TEST_SET = [
 #     %w[ TEST1 ddgearlyk ],
 #     %w[ TEST2 deadly ]
@@ -235,8 +235,8 @@ end
 #   REALDATA = %w[P15172 P17542 P10085 P16075 P13904 Q90477 Q8IU24 P22816 Q10574 O95363]
 # 
 #   def test_sw
-#     score = SmithWatermann::Score.new('ddgearlyk', 'deadly')
-#     sw = SmithWatermann.new('ddgearlyk', 'deadly')
+#     score = SmithWaterman::Score.new('ddgearlyk', 'deadly')
+#     sw = SmithWaterman.new('ddgearlyk', 'deadly')
 #     perm = Permuter.new('ddgearlyk', 'deadly', score.max[0])
 #     perm.permute(1)
 #     sw.print('TEST1', 'TEST2')
@@ -262,11 +262,11 @@ DO_PVAL = 0
 if __FILE__ == $0
   (0...TESTDATA.length).each do |i|
     (i+1...TESTDATA.length).each do |j|
-      score = SmithWatermann::Score.new(TESTDATA[i][1], TESTDATA[j][1])
+      score = SmithWaterman::Score.new(TESTDATA[i][1], TESTDATA[j][1])
       perm = Permuter.new(TESTDATA[i][1], TESTDATA[j][1], score.max)
       perm.permute(1)
 
-      sw = SmithWatermann.new(TESTDATA[i][1], TESTDATA[j][1])
+      sw = SmithWaterman.new(TESTDATA[i][1], TESTDATA[j][1])
       sw.print(TESTDATA[i][0], TESTDATA[j][0])
       puts sw.score
     end
@@ -277,7 +277,7 @@ if __FILE__ == $0
       (i+1...REALDATA.length).each do |j|
         dna1 = get_fasta(REALDATA[i])
         dna2 = get_fasta(REALDATA[j])
-        sw = SmithWatermann.new(dna1, dna2)
+        sw = SmithWaterman.new(dna1, dna2)
       
         p "Matching DNA #{REALDATA[i]} #{REALDATA[j]}"
         sw.print(REALDATA[i], REALDATA[j])
@@ -286,11 +286,11 @@ if __FILE__ == $0
   end
   
   if DO_PVAL == 1
-    sw = SmithWatermann.new(get_fasta('Q10574'),get_fasta('P15172'))
+    sw = SmithWaterman.new(get_fasta('Q10574'),get_fasta('P15172'))
     perm = Permuter.new(get_fasta('Q10574'),get_fasta('P15172'), sw.get_max)
     p "Pval of P15172 : Q10574 on 1000 permutations is: #{perm.permute(1000)}"
     
-    sw = SmithWatermann.new(get_fasta('O95363'),get_fasta('P15172'))
+    sw = SmithWaterman.new(get_fasta('O95363'),get_fasta('P15172'))
     perm = Permuter.new(get_fasta('O95363'),get_fasta('P15172'), sw.get_max)
     p "Pval of P15172 : O95363 on 1000 permutations is: #{perm.permute(1000)}"
   end
