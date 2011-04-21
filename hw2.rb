@@ -89,6 +89,7 @@ module SmithWaterman
         dir, _ = [[:diag, @matrix[i-1][j-1]],
                   [:up, @matrix[i-1][j]],
                   [:left, @matrix[i][j-1]]].max {|(_,a),(_,b)| a <=> b }
+
         i -= 1 if [:diag, :up].include?(dir)
         j -= 1 if [:diag, :left].include?(dir)
 
@@ -112,6 +113,33 @@ module SmithWaterman
     def index(value); @matrix.flatten.index(value).divmod(@y.length); end
 
     # Output
+    def print(first_prefix, second_prefix)
+      top_string, mid_string, bot_string = backtrack
+
+      first_prefix = "#{first_prefix} #{i} "
+      second_prefix = "#{second_prefix} #{j} "
+
+      prefixBuffer = [first_prefix.length, second_prefix.length].max
+      top_prefix = second_prefix.center(prefixBuffer)
+      bot_prefix = first_prefix.center(prefixBuffer)
+
+      mid_skip_char = " ".center([top_prefix.length, bot_prefix.length].max)
+
+      strTop = "#{bot_string}"
+      strBot = "#{top_string}"
+      strMid = " #{mid_string}"
+
+      lines = [strTop.length, strMid.length, strBot.length].max / 60
+      i = 0
+      while i <= lines
+        pos = i*60
+        p "#{bot_prefix}" + strTop[pos, pos+60]
+        p "#{mid_skip_char}" + strMid[pos+1, pos+60]
+        p "#{top_prefix}" + strBot[pos, pos+60]
+        i+=1
+      end
+    end
+
     def inspect; @matrix.inspect; end
     def to_s
       out = "  #{@y.split(//).join('  ')}\n"
