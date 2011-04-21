@@ -1,6 +1,7 @@
 require 'logger'
 require 'minitest/autorun'
 require 'net/http'
+require 'open-uri'
 
 class Permuter
   def initialize(first_dna, second_dna, points)
@@ -34,7 +35,7 @@ class Permuter
   end
 end
 
-class SmithWaterman
+module SmithWaterman
   class Matrix
     GAP_PENALTY = 4
     INDEX = %w[ a r n d c q e g h i l k m f p s t w y v b z x ]
@@ -65,8 +66,8 @@ class SmithWaterman
     ] 
 
     def initialize(x, y)
-      @x = x.downcase
-      @y = y.downcase
+      @x = " #{x.downcase}"
+      @y = " #{y.downcase}"
       @matrix = Array.new(@x.length) { Array.new(@y.length, 0) }
 
       # Build the matrix
@@ -131,15 +132,15 @@ class SmithWaterman
 
   attr_reader :matrix
 
-  def initialize(first_dna, second_dna)
-    @logger = Logger.new(STDOUT)
-    @logger.level = Logger::WARN
-    
-    @first_dna = " #{first_dna.upcase}"
-    @second_dna = " #{second_dna.upcase}"
-    
-    @matrix = Matrix.new(@first_dna, @second_dna)
-  end
+  # def initialize(first_dna, second_dna)
+  #   @logger = Logger.new(STDOUT)
+  #   @logger.level = Logger::WARN
+  #   
+  #   @first_dna = first_dna.upcase
+  #   @second_dna = second_dna.upcase
+  #   
+  #   @matrix = Matrix.new(@first_dna, @second_dna)
+  # end
   
   def print(first_prefix, second_prefix)
     max = @matrix.max
@@ -221,23 +222,27 @@ class SmithWaterman
     
     @logger.debug(@matrix)
   end
+
+  class FastA
+    attr_accessor :dna, :html
+
+    def initialize(code)
+      @html = open("http://www.uniprot.org/uniprot/#{code}.fasta").read
+      @dna = html.split(/\n/)[1..-1].join
+    end
+  end
 end
 
 def get_fasta(code)
-  html = Net::HTTP.get URI.parse("http://www.uniprot.org/uniprot/#{code}.fasta")
-  html = html.split(%r{\n})
-  dna = ""
-  html.each_index do |i|
-    unless i == 0
-      dna = dna + html[i]
-    end
-  end
-  return dna
+  html = open("http://www.uniprot.org/uniprot/#{code}.fasta").read
+  html.split(/\n/)[1..-1].join
 end
 
 class TestSmithWaterman < MiniTest::Unit::TestCase
+  include SmithWaterman
+
   def test_matrix
-    matrix = SmithWaterman::Matrix.new('ddgearlyk', 'deadly')
+    matrix = Matrix.new('ddgearlyk', 'deadly')
     max = matrix.max
     assert_equal(20, max)
     assert_equal([8, 6], matrix.index(max))
@@ -247,9 +252,22 @@ class TestSmithWaterman < MiniTest::Unit::TestCase
     assert_equal(' d  ea.ly', middle)
     assert_equal(' d--eadly', bottom)
   end
+
+  def test_fasta
+    fasta = FastA.new('P15172')
+    dna = <<-DNA
+      MELLSPPLRDVDLTAPDGSLCSFATTDDFYDDPCFDSPDLRFFEDLDPRLMHVGALLKPE
+      EHSHFPAAVHPAPGAREDEHVRAPSGHHQAGRCLLWACKACKRKTTNADRRKAATMRERR
+      RLSKVNEAFETLKRCTSSNPNQRLPKVEILRNAIRYIEGLQALLRDQDAAPPGAAAAFYA
+      PGPLPPGRGGEHYSGDSDASSPRSNCSDGMMDYSGPPSGARRRNCYEGAYYNEAPSEPRP
+      GKSAAVSSLDCLSSIVERISTESPAAPALLLADVPSESPPRRQEAAAPSEGESSGDPTQS
+      PDAAPQCPAGANPNPIYQVL
+    DNA
+    assert_equal(dna.gsub(/\s/, ''), fasta.dna)
+  end
 end
 
-# __END__
+__END__
 
 TESTDATA = [['TEST1','ddgearlyk'],['TEST2','deadly']]
 
