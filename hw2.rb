@@ -13,10 +13,10 @@ class Permuter
   end
   
   def permute(n)
-    counter = n
     k = 0
-    while (counter > 0)
-      permuted_dna = @first_dna
+
+    n.downto(1) do |counter|
+      permuted_dna = @first_dna.dup
       (0...permuted_dna.length).each do |i|
         j = rand(i)
         tmp = permuted_dna[i]
@@ -24,11 +24,11 @@ class Permuter
         permuted_dna[j] = tmp
       end
       sw = SmithWaterman.new(permuted_dna, @second_dna)
-      counter -= 1
       if (sw.matrix.max > @true_matrix)
         k+=1
       end
     end
+
     pval = (Float(k+1) / Float(n+1))
     @logger.debug('pVal ' + pval.to_s + ' over ' + n.to_s + ' permutations')
     return pval
@@ -280,22 +280,18 @@ DO_TEST = 1
 DO_ALIGN = 1
 DO_PVAL = 0
 
-#DNASET = [['P15172','MELLSPPLRDVDLTAPDGSLCSFATTDDFYDDPCFDSPDLRFFEDLDPRLMHVGALLKPEEHSHFPAAVHPAPGAREDEHVRAPSGHHQAGRCLLWACKACKRKTTNADRRKAATMRERRRLSKVNEAFETLKRCTSSNPNQRLPKVEILRNAIRYIEGLQALLRDQDAAPPGAAAAFYAPGPLPPGRGGEHYSGDSDASSPRSNCSDGMMDYSGPPSGARRRNCYEGAYYNEAPSEPRPGKSAAVSSLDCLSSIVERISTESPAAPALLLADVPSESPPRRQEAAAPSEGESSGDPTQSPDAAPQCPAGANPNPIYQVL'],
-#          ['P17542','MTERPPSEAARSDPQLEGRDAAEASMAPPHLVLLNGVAKETSRAAAAEPPVIELGARGGPGGGPAGGGGAARDLKGRDAATAEARHRVPTTELCRPPGPAPAPAPASVTAELPGDGRMVQLSPPALAAPAAPGRALLYSLSQPLASLGSGFFGEPDAFPMFTTNNRVKRRPSPYEMEITDGPHTKVVRRIFTNSRERWRQQNVNGAFAELRKLIPTHPPDKKLSKNEILRLAMKYINFLAKLLNDQEEEGTQRAKTGKDPVVGAGGGGGGGGGGAPPDDLLQDVLSPNSSCGSSLDGAASPDSYTEEPAPKHTARSLHPAMLPAADGAGPR'],          [],
-#          [],
-#          [],
 if __FILE__ == $0
-(0...TESTDATA.length).each do |i|
-  (i+1...TESTDATA.length).each do |j|
-    matrix = SmithWaterman::Matrix.new(TESTDATA[i][1], TESTDATA[j][1])
-    perm = Permuter.new(TESTDATA[i][1], TESTDATA[j][1], matrix.max)
-    perm.permute(1)
+  (0...TESTDATA.length).each do |i|
+    (i+1...TESTDATA.length).each do |j|
+      matrix = SmithWaterman::Matrix.new(TESTDATA[i][1], TESTDATA[j][1])
+      perm = Permuter.new(TESTDATA[i][1], TESTDATA[j][1], matrix.max)
+      perm.permute(1)
 
-    sw = SmithWaterman.new(TESTDATA[i][1], TESTDATA[j][1])
-    sw.print(TESTDATA[i][0], TESTDATA[j][0])
-    puts sw.matrix
+      sw = SmithWaterman.new(TESTDATA[i][1], TESTDATA[j][1])
+      sw.print(TESTDATA[i][0], TESTDATA[j][0])
+      puts sw.matrix
+    end
   end
-end
   
   if DO_ALIGN == 1
     (0...REALDATA.length).each do |i|
@@ -319,5 +315,4 @@ end
     perm = Permuter.new(get_fasta('O95363'),get_fasta('P15172'), sw.get_max)
     p "Pval of P15172 : O95363 on 1000 permutations is: #{perm.permute(1000)}"
   end
-  
 end
