@@ -1,5 +1,4 @@
 require 'logger'
-require 'minitest/autorun'
 require 'net/http'
 
 class Permuter
@@ -205,7 +204,7 @@ class SmithWaterman
     top_prefix = second_prefix.center(prefixBuffer)
     bot_prefix = first_prefix.center(prefixBuffer)
 
-    mid_skip_char = " ".center([top_prefix.length, bot_prefix.length].max - 1)
+    mid_skip_char = " ".center([top_prefix.length, bot_prefix.length].max)
     
     strTop = "#{bot_string}"
     strBot = "#{top_string}"
@@ -216,7 +215,7 @@ class SmithWaterman
     while i <= lines
       pos = i*60
       p "#{bot_prefix}" + strTop[pos, pos+60]
-      p "#{mid_skip_char}" + strMid[pos, pos+60]
+      p "#{mid_skip_char}" + strMid[pos+1, pos+60]
       p "#{top_prefix}" + strBot[pos, pos+60]
       i+=1
     end
