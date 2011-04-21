@@ -1,4 +1,5 @@
 require 'logger'
+require 'minitest/autorun'
 require 'net/http'
 
 class Permuter
@@ -64,8 +65,8 @@ class SmithWaterman
     ] 
 
     def initialize(x, y)
-      @x = " #{x.downcase}"
-      @y = " #{y.downcase}"
+      @x = x.downcase
+      @y = y.downcase
       @matrix = Array.new(@x.length) { Array.new(@y.length, 0) }
 
       # Build the matrix
@@ -93,9 +94,7 @@ class SmithWaterman
         top << ((dir != :left) ? @x[i].chr : '-')
         bottom << ((dir != :up) ? @y[j].chr : '-')
 
-        middle << ((dir == :diag) ? ((@x[i] == @y[j]) ? @x[i].chr
-                                                      : '.')
-                                  : ' ')
+        middle << ((dir == :diag) ? ((@x[i] == @y[j]) ? @x[i].chr : '.') : ' ')
       end
 
       top.reverse!
@@ -250,24 +249,24 @@ class TestSmithWaterman < MiniTest::Unit::TestCase
   end
 end
 
-__END__
+# __END__
 
 TESTDATA = [['TEST1','ddgearlyk'],['TEST2','deadly']]
-# 
-# REALDATA = %w[P15172 P17542 P10085 P16075 P13904 Q90477 Q8IU24 P22816 Q10574 O95363]
-# 
-# # FLAGS for assignment. DO_TEST works on 'deadly v ddgearlyk'
-# # DO_ALIGN works on aligning all proteins in REALDATA
-# # DO_PVAL calculates the pval for a couple proteins on 1000 permutations
-# DO_TEST = 1
-# DO_ALIGN = 1
-# DO_PVAL = 0
-# 
-# #DNASET = [['P15172','MELLSPPLRDVDLTAPDGSLCSFATTDDFYDDPCFDSPDLRFFEDLDPRLMHVGALLKPEEHSHFPAAVHPAPGAREDEHVRAPSGHHQAGRCLLWACKACKRKTTNADRRKAATMRERRRLSKVNEAFETLKRCTSSNPNQRLPKVEILRNAIRYIEGLQALLRDQDAAPPGAAAAFYAPGPLPPGRGGEHYSGDSDASSPRSNCSDGMMDYSGPPSGARRRNCYEGAYYNEAPSEPRPGKSAAVSSLDCLSSIVERISTESPAAPALLLADVPSESPPRRQEAAAPSEGESSGDPTQSPDAAPQCPAGANPNPIYQVL'],
-# #          ['P17542','MTERPPSEAARSDPQLEGRDAAEASMAPPHLVLLNGVAKETSRAAAAEPPVIELGARGGPGGGPAGGGGAARDLKGRDAATAEARHRVPTTELCRPPGPAPAPAPASVTAELPGDGRMVQLSPPALAAPAAPGRALLYSLSQPLASLGSGFFGEPDAFPMFTTNNRVKRRPSPYEMEITDGPHTKVVRRIFTNSRERWRQQNVNGAFAELRKLIPTHPPDKKLSKNEILRLAMKYINFLAKLLNDQEEEGTQRAKTGKDPVVGAGGGGGGGGGGAPPDDLLQDVLSPNSSCGSSLDGAASPDSYTEEPAPKHTARSLHPAMLPAADGAGPR'],          [],
-# #          [],
-# #          [],
-# if __FILE__ == $0
+
+REALDATA = %w[P15172 P17542 P10085 P16075 P13904 Q90477 Q8IU24 P22816 Q10574 O95363]
+
+# FLAGS for assignment. DO_TEST works on 'deadly v ddgearlyk'
+# DO_ALIGN works on aligning all proteins in REALDATA
+# DO_PVAL calculates the pval for a couple proteins on 1000 permutations
+DO_TEST = 1
+DO_ALIGN = 1
+DO_PVAL = 0
+
+#DNASET = [['P15172','MELLSPPLRDVDLTAPDGSLCSFATTDDFYDDPCFDSPDLRFFEDLDPRLMHVGALLKPEEHSHFPAAVHPAPGAREDEHVRAPSGHHQAGRCLLWACKACKRKTTNADRRKAATMRERRRLSKVNEAFETLKRCTSSNPNQRLPKVEILRNAIRYIEGLQALLRDQDAAPPGAAAAFYAPGPLPPGRGGEHYSGDSDASSPRSNCSDGMMDYSGPPSGARRRNCYEGAYYNEAPSEPRPGKSAAVSSLDCLSSIVERISTESPAAPALLLADVPSESPPRRQEAAAPSEGESSGDPTQSPDAAPQCPAGANPNPIYQVL'],
+#          ['P17542','MTERPPSEAARSDPQLEGRDAAEASMAPPHLVLLNGVAKETSRAAAAEPPVIELGARGGPGGGPAGGGGAARDLKGRDAATAEARHRVPTTELCRPPGPAPAPAPASVTAELPGDGRMVQLSPPALAAPAAPGRALLYSLSQPLASLGSGFFGEPDAFPMFTTNNRVKRRPSPYEMEITDGPHTKVVRRIFTNSRERWRQQNVNGAFAELRKLIPTHPPDKKLSKNEILRLAMKYINFLAKLLNDQEEEGTQRAKTGKDPVVGAGGGGGGGGGGAPPDDLLQDVLSPNSSCGSSLDGAASPDSYTEEPAPKHTARSLHPAMLPAADGAGPR'],          [],
+#          [],
+#          [],
+if __FILE__ == $0
 (0...TESTDATA.length).each do |i|
   (i+1...TESTDATA.length).each do |j|
     matrix = SmithWaterman::Matrix.new(TESTDATA[i][1], TESTDATA[j][1])
@@ -279,28 +278,28 @@ TESTDATA = [['TEST1','ddgearlyk'],['TEST2','deadly']]
     puts sw.matrix
   end
 end
-#   
-#   if DO_ALIGN == 1
-#     (0...REALDATA.length).each do |i|
-#       (i+1...REALDATA.length).each do |j|
-#         dna1 = get_fasta(REALDATA[i])
-#         dna2 = get_fasta(REALDATA[j])
-#         sw = SmithWaterman.new(dna1, dna2)
-#       
-#         p "Matching DNA #{REALDATA[i]} #{REALDATA[j]}"
-#         sw.print(REALDATA[i], REALDATA[j])
-#       end
-#     end
-#   end
-#   
-#   if DO_PVAL == 1
-#     sw = SmithWaterman.new(get_fasta('Q10574'),get_fasta('P15172'))
-#     perm = Permuter.new(get_fasta('Q10574'),get_fasta('P15172'), sw.get_max)
-#     p "Pval of P15172 : Q10574 on 1000 permutations is: #{perm.permute(1000)}"
-#     
-#     sw = SmithWaterman.new(get_fasta('O95363'),get_fasta('P15172'))
-#     perm = Permuter.new(get_fasta('O95363'),get_fasta('P15172'), sw.get_max)
-#     p "Pval of P15172 : O95363 on 1000 permutations is: #{perm.permute(1000)}"
-#   end
-#   
-# end
+  
+  if DO_ALIGN == 1
+    (0...REALDATA.length).each do |i|
+      (i+1...REALDATA.length).each do |j|
+        dna1 = get_fasta(REALDATA[i])
+        dna2 = get_fasta(REALDATA[j])
+        sw = SmithWaterman.new(dna1, dna2)
+      
+        p "Matching DNA #{REALDATA[i]} #{REALDATA[j]}"
+        sw.print(REALDATA[i], REALDATA[j])
+      end
+    end
+  end
+  
+  if DO_PVAL == 1
+    sw = SmithWaterman.new(get_fasta('Q10574'),get_fasta('P15172'))
+    perm = Permuter.new(get_fasta('Q10574'),get_fasta('P15172'), sw.get_max)
+    p "Pval of P15172 : Q10574 on 1000 permutations is: #{perm.permute(1000)}"
+    
+    sw = SmithWaterman.new(get_fasta('O95363'),get_fasta('P15172'))
+    perm = Permuter.new(get_fasta('O95363'),get_fasta('P15172'), sw.get_max)
+    p "Pval of P15172 : O95363 on 1000 permutations is: #{perm.permute(1000)}"
+  end
+  
+end
